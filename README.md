@@ -12,9 +12,9 @@ role uses different repositories depending on the platform:
 
 | Platform | Source |
 |---|---|
-| Debian 11/12/13, Ubuntu 22.04+ | Official Jellyfin APT repository (`repo.jellyfin.org`), same as `install-debuntu.sh` |
+| Debian 12/13, Ubuntu 22.04+ | Official Jellyfin APT repository (`repo.jellyfin.org`), same as `install-debuntu.sh` |
 | Fedora, RHEL/Rocky/AlmaLinux 10+ | Community packages from [RPM Fusion](https://rpmfusion.org) (free repository) |
-| EL9, Amazon Linux | Not supported — no community builds exist; use a [container](https://jellyfin.org/docs/general/installation/container/) instead |
+| Debian 11, EL9, Amazon Linux | Not supported — no usable package sources exist; use a [container](https://jellyfin.org/docs/general/installation/container/) instead |
 
 Requirements
 ------------
