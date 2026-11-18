@@ -1,6 +1,29 @@
 #SPDX-License-Identifier: MIT-0
 ---
+- name: Assert distribution has community Jellyfin packages
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.distribution in jellyfin_supported_rpm_distributions
+      - ansible_facts.distribution == 'Fedora'
+        or ansible_facts.distribution_major_version is version(jellyfin_min_el_version, '>=')
+    fail_msg: >-
+      Jellyfin publishes no official RPMs and RPM Fusion does not build Jellyfin for
+      {{ ansible_facts.distribution }} {{ ansible_facts.distribution_major_version }}.
+      Use a container-based install instead: https://jellyfin.org/docs/general/installation/container/
+    quiet: true
 
-- name: Task is only run when RedHat OS
-  ansible.builtin.debug:
-    msg: "This is a task for RedHat OS from my_role."
+- name: Import RPM Fusion GPG key
+  ansible.builtin.rpm_key:
+    key: "{{ jellyfin_rpmfusion_gpg_key }}"
+    state: present
+
+- name: Add RPM Fusion free repository
+  ansible.builtin.dnf:
+    name: "{{ jellyfin_rpmfusion_release_rpm }}"
+    state: present
+  register: jellyfin_repo
+
+- name: Update cache if repo changed
+  ansible.builtin.dnf:
+    update_cache: true
+  when: jellyfin_repo is changed

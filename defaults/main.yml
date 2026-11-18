@@ -1,3 +1,37 @@
 #SPDX-License-Identifier: MIT-0
 ---
-# defaults file for role
+# Package
+jellyfin_package: jellyfin
+jellyfin_package_state: present
+# Pin a specific package version (leave empty for the latest available).
+jellyfin_package_version: ""
+
+# Service
+jellyfin_service_name: jellyfin
+jellyfin_service_state: started
+jellyfin_service_enabled: true
+
+# Debian/Ubuntu: official Jellyfin APT repository (https://repo.jellyfin.org)
+# jellyfin_apt_repo_os is derived from the distribution; override to point at the
+# 'debian' or 'ubuntu' repo from a derivative distribution.
+jellyfin_apt_repo_os: "{{ jellyfin_repo_os_map[ansible_facts.distribution] | default('debian') }}"
+jellyfin_apt_release: "{{ ansible_facts.distribution_release }}"
+jellyfin_apt_uri: "https://repo.jellyfin.org/{{ jellyfin_apt_repo_os }}"
+jellyfin_apt_gpg_key: "https://repo.jellyfin.org/jellyfin_team.gpg.key"
+
+# RedHat family: community RPMs provided by RPM Fusion (free repository).
+# Jellyfin stopped publishing official RPMs after 10.9.
+jellyfin_rpmfusion_fedora: "https://download1.rpmfusion.org/free/fedora/\
+  rpmfusion-free-release-{{ ansible_facts.distribution_major_version }}.noarch.rpm"
+jellyfin_rpmfusion_el: "https://download1.rpmfusion.org/free/el/\
+  rpmfusion-free-release-{{ ansible_facts.distribution_major_version }}.noarch.rpm"
+jellyfin_rpmfusion_release_rpm: >-
+  {{ jellyfin_rpmfusion_fedora if ansible_facts.distribution == 'Fedora'
+  else jellyfin_rpmfusion_el }}
+jellyfin_rpmfusion_gpg_key_fedora: "https://rpmfusion.org/keys?action=AttachFile&do=get&\
+  target=RPM-GPG-KEY-rpmfusion-free-fedora-2020"
+jellyfin_rpmfusion_gpg_key_el: "https://rpmfusion.org/keys?action=AttachFile&do=get&\
+  target=RPM-GPG-KEY-rpmfusion-free-el-{{ ansible_facts.distribution_major_version }}"
+jellyfin_rpmfusion_gpg_key: >-
+  {{ jellyfin_rpmfusion_gpg_key_fedora if ansible_facts.distribution == 'Fedora'
+  else jellyfin_rpmfusion_gpg_key_el }}

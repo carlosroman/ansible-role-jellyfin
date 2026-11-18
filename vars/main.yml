@@ -1,3 +1,17 @@
 #SPDX-License-Identifier: MIT-0
 ---
-# vars file for role
+# Maps Ansible distributions to the matching Jellyfin APT repository component.
+jellyfin_repo_os_map:
+  Debian: debian
+  Raspbian: debian
+  Ubuntu: ubuntu
+
+# Distributions with RPM Fusion builds of Jellyfin.
+jellyfin_supported_rpm_distributions:
+  - Fedora
+  - RedHat
+  - Rocky
+  - AlmaLinux
+
+# Minimum Enterprise Linux major version with RPM Fusion builds of Jellyfin.
+jellyfin_min_el_version: "10"

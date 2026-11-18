@@ -1,6 +1,21 @@
 #SPDX-License-Identifier: MIT-0
 ---
+- name: Add Jellyfin APT repository
+  ansible.builtin.deb822_repository:
+    name: jellyfin
+    uris:
+      - "{{ jellyfin_apt_uri }}"
+    types: deb
+    enabled: true
+    suites: "{{ jellyfin_apt_release }}"
+    components:
+      - main
+    signed_by: "{{ jellyfin_apt_gpg_key }}"
+    state: present
+    install_python_debian: true
+  register: jellyfin_repo
 
-- name: Task is only run when Debian OS
-  ansible.builtin.debug:
-    msg: "This is a task for Debian OS from my_role."
+- name: Update cache if repo changed
+  ansible.builtin.apt:
+    update_cache: true
+  when: jellyfin_repo is changed
