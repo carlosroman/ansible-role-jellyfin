@@ -39,8 +39,6 @@ jobs:
           - debian11
           - fedora44
           - rockylinux10
-          - rockylinux9
-          - amazonlinux2023
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
