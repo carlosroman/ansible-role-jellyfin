@@ -7,12 +7,25 @@
     - name: Update apt cache.
       apt: update_cache=true cache_valid_time=600
       changed_when: false
-      when: ansible_os_family == 'Debian'
+      when: ansible_facts.os_family == 'Debian'
 
   roles:
-    - role: carlosroman.base_role
+    - role: carlosroman.jellyfin
 
   post_tasks:
-    - name: Verify
-      ansible.builtin.debug:
-        msg: "Add your verification tasks here."
+    - name: Verify Jellyfin binary is available
+      ansible.builtin.command: jellyfin --version
+      register: jellyfin_version
+      changed_when: false
+      # jellyfin --version prints to stderr and exits non-zero.
+      failed_when: "'Jellyfin' not in jellyfin_version.stdout + jellyfin_version.stderr"
+
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Verify Jellyfin service is running and enabled
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services['jellyfin.service'].state in ['active', 'running']
+          - ansible_facts.services['jellyfin.service'].status in ['enabled', 'enabled-runtime', 'alias', 'static']
+        fail_msg: "Jellyfin service is not running/enabled: {{ ansible_facts.services['jellyfin.service'] }}"
