@@ -34,17 +34,9 @@ test/debian-12 :
 test/debian-11 :
 	@(MOLECULE_DISTRO=debian11 ${MOLECULE_TEST})
 
-.PHONY : test/rocky-9
-test/rocky-9 :
-	@(MOLECULE_DISTRO=rockylinux9 ${MOLECULE_TEST})
-
 .PHONY : test/rocky-10
 test/rocky-10 :
 	@(MOLECULE_DISTRO=rockylinux10 ${MOLECULE_TEST})
-
-.PHONY : test/amazonlinux-2023
-test/amazonlinux-2023 :
-	@(MOLECULE_DISTRO=amazonlinux2023 ${MOLECULE_TEST})
 
 .PHONY : test/fedora-44
 test/fedora-44 :
@@ -59,8 +51,6 @@ test/all : test/debian-12
 test/all : test/debian-11
 test/all : test/fedora-44
 test/all : test/rocky-10
-test/all : test/rocky-9
-test/all : test/amazonlinux-2023
 
 .PHONY : lint
 lint :
