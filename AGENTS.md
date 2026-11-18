@@ -15,14 +15,15 @@ All driven by `make`:
 | `make lint` | Runs `yamllint .` |
 | `make test` | Runs `molecule test` (single distro, defaults to `ubuntu2404`) |
 | `make test/ubuntu-2404` | Test against a specific distro |
-| `make test/all` | Test against all 8 supported distros sequentially |
+| `make test/all` | Test against all 7 supported distros sequentially |
 
-Available distro targets: `ubuntu-2604`, `ubuntu-2404`, `ubuntu-2204`, `debian-13`, `debian-12`, `debian-11`, `fedora-44`, `rocky-10`.
+Available distro targets: `ubuntu-2604`, `ubuntu-2404`, `ubuntu-2204`, `debian-13`, `debian-12`, `fedora-44`, `rocky-10`.
 
 Override distro without a make target: `MOLECULE_DISTRO=debian12 molecule test`.
 
-> Note: EL9 and Amazon Linux are not supported — Jellyfin publishes no official RPMs
-> (since 10.9) and RPM Fusion only builds for Fedora and EL10+.
+> Note: Debian 11, EL9 and Amazon Linux are not supported — Jellyfin publishes no
+> official RPMs (since 10.9), RPM Fusion only builds for Fedora and EL10+, and
+> Debian 11 is EOL with its archives removed from deb.debian.org.
 
 ## Molecule setup
 
@@ -35,7 +36,7 @@ Override distro without a make target: `MOLECULE_DISTRO=debian12 molecule test`.
 
 Two jobs run on push/PR:
 1. **Lint** — `make lint`
-2. **Test** — `make test` across matrix: `debian11`, `debian12`, `debian13`, `ubuntu2204`, `ubuntu2404`, `ubuntu2604`, `fedora44`, `rockylinux10`
+2. **Test** — `make test` across matrix: `debian12`, `debian13`, `ubuntu2204`, `ubuntu2404`, `ubuntu2604`, `fedora44`, `rockylinux10`
 
 ## Dependencies
 
