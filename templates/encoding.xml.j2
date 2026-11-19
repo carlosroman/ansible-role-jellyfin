@@ -5,19 +5,21 @@
      Only the hardware-relevant elements are written. Jellyfin reads this file
      with .NET's XmlSerializer, which supplies its own default for every element
      that is absent, so the managed set is deliberately small: an option added
-     upstream does not have to be known here for the file to remain valid, and
-     settings outside this list keep whatever value the dashboard gave them.
+     upstream does not have to be known here for the file to remain valid.
+     Interpolated values are XML-escaped.
 
      Jellyfin re-saves the complete option document a few seconds after it
      starts (measured on 12.4), so the expanded file with these values in it is
      the steady state; the role converges the values of the elements below, not
-     the layout of the file.
+     the layout of the file. That also means a rewrite here drops the elements
+     outside this list, and Jellyfin refills them with its defaults - see the
+     README before relying on a dashboard value that is not managed here.
 
      Keep this list in sync with jellyfin_encoding_managed_elements in
      vars/main.yml, which is what decides whether this file is rewritten. -->
 <EncodingOptions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
-  <HardwareAccelerationType>{{ jellyfin_hardware_acceleration }}</HardwareAccelerationType>
-  <VaapiDevice>{{ jellyfin_vaapi_device }}</VaapiDevice>
+  <HardwareAccelerationType>{{ jellyfin_hardware_acceleration | e }}</HardwareAccelerationType>
+  <VaapiDevice>{{ jellyfin_vaapi_device | e }}</VaapiDevice>
   <EnableHardwareEncoding>true</EnableHardwareEncoding>
   <AllowHevcEncoding>{{ jellyfin_allow_hevc_encoding | lower }}</AllowHevcEncoding>
   <AllowAv1Encoding>{{ jellyfin_allow_av1_encoding | lower }}</AllowAv1Encoding>
@@ -26,7 +28,7 @@
 {% if jellyfin_hardware_decoding_codecs %}
   <HardwareDecodingCodecs>
 {% for codec in jellyfin_hardware_decoding_codecs %}
-    <string>{{ codec }}</string>
+    <string>{{ codec | e }}</string>
 {% endfor %}
   </HardwareDecodingCodecs>
 {% else %}

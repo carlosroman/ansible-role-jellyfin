@@ -61,8 +61,10 @@
 # therefore report a change on every converge and restart the transcoder each
 # time, so the role converges the elements it owns instead: encoding.xml is
 # written when it is missing or when one of those elements no longer holds the
-# configured value. Everything else in the file (and every other dashboard
-# setting) is left alone.
+# configured value. Settings outside that set are never edited by the role, but
+# they do not survive a rewrite either - the template holds the managed elements
+# only and Jellyfin refills the rest with its defaults (the README carries the
+# same caveat for operators).
 - name: Inspect the Jellyfin encoding configuration
   ansible.builtin.stat:
     path: "{{ jellyfin_config_dir }}/encoding.xml"

@@ -117,11 +117,18 @@ Things worth knowing before you pick values:
   silent regression found at the next rebuild. Only these elements are managed:
   `HardwareAccelerationType`, `VaapiDevice`, `EnableHardwareEncoding`,
   `AllowHevcEncoding`, `AllowAv1Encoding`, `EnableTonemapping`,
-  `EnableVppTonemapping`, `HardwareDecodingCodecs`. Jellyfin's own serializer
-  supplies defaults for every element the file omits, so the managed set stays
-  small and every other dashboard setting keeps its value. Note that Jellyfin
-  re-saves the complete option document shortly after it starts, so the file you
-  see in the steady state is that expanded document carrying these values.
+  `EnableVppTonemapping`, `HardwareDecodingCodecs`.
+- **Settings outside that list survive a converge that changes nothing, but not
+  a rewrite.** The role writes only the managed elements and Jellyfin's
+  serializer supplies a default for everything the file omits, which is what
+  keeps the managed set small and the file valid across upstream versions;
+  Jellyfin then re-saves the complete option document shortly after it starts, so
+  the steady-state file is that expanded document carrying these values. When a
+  managed value reverts, though, the rewrite drops the unmanaged elements and
+  Jellyfin refills them with its own defaults (measured on 12.4: a
+  dashboard-chosen `H264Crf` of 20 came back as 23). If a non-default value for
+  something outside the managed set matters to you, add that element to the role
+  or accept Jellyfin's default — a dashboard-only value is not durable.
 - **Turning the opt-in off again leaves the file in place.** The role never
   deletes `encoding.xml`, so remove the variable only when you are content for
   the dashboard to own those settings again.

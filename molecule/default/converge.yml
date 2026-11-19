@@ -31,12 +31,12 @@
         fail_msg: "Jellyfin service is not running/enabled: {{ ansible_facts.services['jellyfin.service'] }}"
 
     # No hardware acceleration opt-in is set in this playbook, so the role must
-    # leave Jellyfin's transcoding configuration exactly as the application wrote
-    # it. Jellyfin creates encoding.xml itself when the server first starts (it
-    # exists on a fresh 12.4 install with no settings touched), so the file being
-    # present is not evidence of the role's work; what has to be absent is the
-    # role's rendering of it - the management comment - and an acceleration type
-    # that only the role can put there.
+    # leave Jellyfin's transcoding configuration alone. Jellyfin writes
+    # encoding.xml itself a few seconds after the server first starts, so at
+    # post-task time it is usually still absent and sometimes already the
+    # application's own document; neither is evidence of the role's work. What
+    # has to be absent is the role's rendering of it - the management comment -
+    # and an acceleration type that only the role can put there.
     - name: Inspect the Jellyfin encoding configuration
       ansible.builtin.stat:
         path: /etc/jellyfin/encoding.xml

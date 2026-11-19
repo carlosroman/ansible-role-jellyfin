@@ -37,13 +37,15 @@ jellyfin_tonemapping_modes:
 
 # The encoding.xml elements this role owns, written the way Jellyfin's .NET
 # XmlSerializer writes them (lowercase booleans, codecs as <string> items, an
-# empty list as an empty element). This is the set the role compares against the
-# file on disk to decide whether encoding.xml needs writing, because Jellyfin
-# re-saves the complete option document shortly after it starts; keep it in sync
-# with templates/encoding.xml.j2.
+# empty list as an empty element) and XML-escaped exactly like the template, or
+# an escaped value on disk would never match and the file would be rewritten on
+# every converge. This is the set the role compares against the file on disk to
+# decide whether encoding.xml needs writing, because Jellyfin re-saves the
+# complete option document shortly after it starts; keep it in sync with
+# templates/encoding.xml.j2.
 jellyfin_encoding_managed_elements:
-  - "<HardwareAccelerationType>{{ jellyfin_hardware_acceleration }}</HardwareAccelerationType>"
-  - "<VaapiDevice>{{ jellyfin_vaapi_device }}</VaapiDevice>"
+  - "<HardwareAccelerationType>{{ jellyfin_hardware_acceleration | e }}</HardwareAccelerationType>"
+  - "<VaapiDevice>{{ jellyfin_vaapi_device | e }}</VaapiDevice>"
   - "<EnableHardwareEncoding>true</EnableHardwareEncoding>"
   - "<AllowHevcEncoding>{{ jellyfin_allow_hevc_encoding | lower }}</AllowHevcEncoding>"
   - "<AllowAv1Encoding>{{ jellyfin_allow_av1_encoding | lower }}</AllowAv1Encoding>"
@@ -51,4 +53,4 @@ jellyfin_encoding_managed_elements:
   - "<EnableVppTonemapping>{{ 'true' if jellyfin_tonemapping == 'vpp' else 'false' }}</EnableVppTonemapping>"
   - >-
     <HardwareDecodingCodecs>{% for codec in jellyfin_hardware_decoding_codecs
-    %}<string>{{ codec }}</string>{% endfor %}</HardwareDecodingCodecs>
+    %}<string>{{ codec | e }}</string>{% endfor %}</HardwareDecodingCodecs>
