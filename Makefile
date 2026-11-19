@@ -38,6 +38,15 @@ test/rocky-10 :
 test/fedora-44 :
 	@(MOLECULE_DISTRO=fedora44 ${MOLECULE_TEST})
 
+# Hardware acceleration opt-in variant (molecule/default/converge-hardware.yml).
+.PHONY : test/hardware
+test/hardware :
+	@(MOLECULE_PLAYBOOK=converge-hardware.yml ${MOLECULE_TEST})
+
+.PHONY : test/hardware/ubuntu-2604
+test/hardware/ubuntu-2604 :
+	@(MOLECULE_DISTRO=ubuntu2604 MOLECULE_PLAYBOOK=converge-hardware.yml ${MOLECULE_TEST})
+
 .PHONY : test/all
 test/all : test/ubuntu-2604
 test/all : test/ubuntu-2404

@@ -29,3 +29,32 @@
           - ansible_facts.services['jellyfin.service'].state in ['active', 'running']
           - ansible_facts.services['jellyfin.service'].status in ['enabled', 'enabled-runtime', 'alias', 'static']
         fail_msg: "Jellyfin service is not running/enabled: {{ ansible_facts.services['jellyfin.service'] }}"
+
+    # No hardware acceleration opt-in is set in this playbook, so the role must
+    # leave Jellyfin's transcoding configuration exactly as the application wrote
+    # it. Jellyfin creates encoding.xml itself when the server first starts (it
+    # exists on a fresh 12.4 install with no settings touched), so the file being
+    # present is not evidence of the role's work; what has to be absent is the
+    # role's rendering of it - the management comment - and an acceleration type
+    # that only the role can put there.
+    - name: Inspect the Jellyfin encoding configuration
+      ansible.builtin.stat:
+        path: /etc/jellyfin/encoding.xml
+      register: jellyfin_encoding_stat
+
+    - name: Read the Jellyfin encoding configuration
+      ansible.builtin.slurp:
+        src: /etc/jellyfin/encoding.xml
+      register: jellyfin_encoding_contents
+      when: jellyfin_encoding_stat.stat.exists
+
+    - name: Verify the role left the encoding configuration to Jellyfin
+      ansible.builtin.assert:
+        that:
+          - "'Managed by Ansible' not in encoding"
+          - "encoding == '' or '<HardwareAccelerationType>none</HardwareAccelerationType>' in encoding"
+        fail_msg: >-
+          The role wrote encoding.xml although jellyfin_hardware_acceleration is
+          unset: {{ encoding | default('', true) }}
+      vars:
+        encoding: "{{ (jellyfin_encoding_contents.content | default('', true) | b64decode) | trim }}"

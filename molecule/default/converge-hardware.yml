@@ -1,0 +1,88 @@
+#SPDX-License-Identifier: MIT-0
+---
+# Converge playbook variant that exercises the hardware acceleration opt-in.
+# Run with: make test/hardware
+#
+# These containers have no /dev/dri at all, which is the more interesting half
+# of the test: Jellyfin has to come up with a render node it cannot open, log
+# about it, and fall back to software rather than refusing to start. A host whose
+# device passthrough breaks must not lose its media server.
+#
+# The checks read the values inside encoding.xml rather than the file as written
+# by the template: Jellyfin re-saves the complete option document a few seconds
+# after it starts (measured on 12.4), so the expanded file holding these values
+# is the steady state the role converges.
+- name: Converge (hardware acceleration)
+  hosts: all
+
+  pre_tasks:
+    - name: Update apt cache.
+      apt: update_cache=true cache_valid_time=600
+      changed_when: false
+      when: ansible_facts['os_family'] == 'Debian'
+
+  roles:
+    - role: carlosroman.jellyfin
+      vars:
+        jellyfin_hardware_acceleration: vaapi
+        jellyfin_allow_hevc_encoding: true
+        jellyfin_tonemapping: opencl
+        jellyfin_hardware_decoding_codecs:
+          - h264
+          - hevc
+
+  post_tasks:
+    - name: Verify encoding.xml was written
+      ansible.builtin.stat:
+        path: /etc/jellyfin/encoding.xml
+      register: hw_encoding_stat
+      failed_when: not hw_encoding_stat.stat.exists
+
+    - name: Verify encoding.xml can be read and rewritten by Jellyfin
+      ansible.builtin.assert:
+        that:
+          - hw_encoding_stat.stat.pw_name == 'jellyfin'
+          - hw_encoding_stat.stat.gr_name == 'jellyfin'
+          - hw_encoding_stat.stat.mode == '0644'
+        fail_msg: "encoding.xml has unexpected ownership or mode: {{ hw_encoding_stat.stat }}"
+
+    - name: Read encoding.xml
+      ansible.builtin.slurp:
+        src: /etc/jellyfin/encoding.xml
+      register: hw_encoding_file
+
+    - name: Verify encoding.xml holds the configured hardware options
+      ansible.builtin.assert:
+        that:
+          - item in encoding
+        fail_msg: "{{ item }} is missing from encoding.xml"
+      loop:
+        - "<HardwareAccelerationType>vaapi</HardwareAccelerationType>"
+        - "<VaapiDevice>/dev/dri/renderD128</VaapiDevice>"
+        - "<EnableHardwareEncoding>true</EnableHardwareEncoding>"
+        - "<AllowHevcEncoding>true</AllowHevcEncoding>"
+        - "<AllowAv1Encoding>false</AllowAv1Encoding>"
+        - "<EnableTonemapping>true</EnableTonemapping>"
+        - "<EnableVppTonemapping>false</EnableVppTonemapping>"
+        - "<HardwareDecodingCodecs><string>h264</string><string>hevc</string></HardwareDecodingCodecs>"
+      vars:
+        # Layout is irrelevant to the assertion: Jellyfin re-indents the file and
+        # writes the codec list one item per line.
+        encoding: "{{ (hw_encoding_file.content | b64decode) | regex_replace('\\s+', '') }}"
+
+    # The package set is a Debian-family behaviour (see the note in
+    # tasks/main.yml), so only that family is checked; the XML and service checks
+    # above apply to every platform the role supports.
+    - name: Verify the GPU runtime packages are installed
+      ansible.builtin.command: dpkg-query -W intel-media-va-driver-non-free vainfo intel-opencl-icd
+      changed_when: false
+      when: ansible_facts['os_family'] == 'Debian'
+
+    # The restart handler has run by now, so Jellyfin has already read a render
+    # node it cannot open. It must be up anyway and software-encoding; the
+    # retries are here to catch a crash loop rather than a slow start.
+    - name: Verify Jellyfin is still running without a render node
+      ansible.builtin.service_facts:
+      until: ansible_facts.services['jellyfin.service'].state in ['active', 'running']
+      retries: 12
+      delay: 5

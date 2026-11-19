@@ -11,6 +11,60 @@ jellyfin_service_name: jellyfin
 jellyfin_service_state: started
 jellyfin_service_enabled: true
 
+# Hardware acceleration (opt-in).
+# Empty means the role does not touch Jellyfin's encoding configuration or the
+# GPU packages: today's behaviour, unchanged for every host that has not opted
+# in. Set it to a Jellyfin acceleration type ('vaapi', 'qsv', 'nvenc', 'amf',
+# 'v4l2m2m', 'videotoolbox', 'rkmpp' or 'none') to render encoding.xml in
+# jellyfin_config_dir from the variables below and, on the Debian family,
+# install the driver runtime that configuration needs.
+#
+# There is no useful default for the rest of these: whether a GPU can encode
+# HEVC or AV1, and whether its driver implements VPP tone mapping, depends on
+# the exact silicon and driver, so choosing values is per-host policy for the
+# inventory rather than a constant the role can ship.
+jellyfin_hardware_acceleration: ""
+
+# Jellyfin's configuration directory, where the package writes system.xml,
+# network.xml and encoding.xml. The value comes from the packaging: the deb sets
+# JELLYFIN_CONFIG_DIR=/etc/jellyfin in /etc/default/jellyfin and the RPM ships
+# /etc/jellyfin itself (with /etc/sysconfig/jellyfin for the same settings).
+jellyfin_config_dir: /etc/jellyfin
+
+# The VA-API render node to transcode on. Only read by the VA-API backend, but
+# it is part of the file Jellyfin always writes. In a container this must be the
+# device the Jellyfin daemon user can actually open (see the README on group
+# access to a passed-through render node).
+jellyfin_vaapi_device: /dev/dri/renderD128
+
+# Encoder opt-ins. Jellyfin offers these codecs whether or not the GPU can
+# encode them, and a codec the silicon cannot encode produces a failing
+# transcode rather than a software fallback, so both start off.
+jellyfin_allow_hevc_encoding: false
+jellyfin_allow_av1_encoding: false
+
+# Codecs decoded on the GPU. Set to an empty list to decode on the CPU.
+jellyfin_hardware_decoding_codecs:
+  - h264
+  - hevc
+
+# HDR tone mapping: '' (off), 'opencl' or 'vpp'. OpenCL tone mapping needs an
+# OpenCL ICD (the role installs intel-opencl-icd for it on the Debian family);
+# VPP is the cheaper path but only where the driver implements it, which the
+# Intel iHD driver does not for tonemap_vaapi as of 26.1.2.
+jellyfin_tonemapping: ""
+
+# Install the Debian-family GPU runtime packages along with the acceleration
+# opt-in. Set to false where the driver stack is already managed elsewhere.
+jellyfin_install_gpu_packages: true
+
+# The Debian-family GPU runtime packages for the opt-in. intel-opencl-icd is
+# only pulled in when OpenCL tone mapping is selected; override the whole list
+# to match a different vendor or a driver package you prefer.
+jellyfin_gpu_packages_debian: >-
+  {{ ['intel-media-va-driver-non-free', 'vainfo']
+  + (['intel-opencl-icd'] if jellyfin_tonemapping == 'opencl' else []) }}
+
 # Debian/Ubuntu: official Jellyfin APT repository (https://repo.jellyfin.org)
 # jellyfin_apt_repo_os is derived from the distribution; override to point at the
 # 'debian' or 'ubuntu' repo from a derivative distribution.

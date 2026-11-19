@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Managed by Ansible (carlosroman.jellyfin) - dashboard edits to these
+     settings are reverted on the next converge.
+
+     Only the hardware-relevant elements are written. Jellyfin reads this file
+     with .NET's XmlSerializer, which supplies its own default for every element
+     that is absent, so the managed set is deliberately small: an option added
+     upstream does not have to be known here for the file to remain valid, and
+     settings outside this list keep whatever value the dashboard gave them.
+
+     Jellyfin re-saves the complete option document a few seconds after it
+     starts (measured on 12.4), so the expanded file with these values in it is
+     the steady state; the role converges the values of the elements below, not
+     the layout of the file.
+
+     Keep this list in sync with jellyfin_encoding_managed_elements in
+     vars/main.yml, which is what decides whether this file is rewritten. -->
+<EncodingOptions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <HardwareAccelerationType>{{ jellyfin_hardware_acceleration }}</HardwareAccelerationType>
+  <VaapiDevice>{{ jellyfin_vaapi_device }}</VaapiDevice>
+  <EnableHardwareEncoding>true</EnableHardwareEncoding>
+  <AllowHevcEncoding>{{ jellyfin_allow_hevc_encoding | lower }}</AllowHevcEncoding>
+  <AllowAv1Encoding>{{ jellyfin_allow_av1_encoding | lower }}</AllowAv1Encoding>
+  <EnableTonemapping>{{ 'true' if jellyfin_tonemapping else 'false' }}</EnableTonemapping>
+  <EnableVppTonemapping>{{ 'true' if jellyfin_tonemapping == 'vpp' else 'false' }}</EnableVppTonemapping>
+{% if jellyfin_hardware_decoding_codecs %}
+  <HardwareDecodingCodecs>
+{% for codec in jellyfin_hardware_decoding_codecs %}
+    <string>{{ codec }}</string>
+{% endfor %}
+  </HardwareDecodingCodecs>
+{% else %}
+  <HardwareDecodingCodecs />
+{% endif %}
+</EncodingOptions>

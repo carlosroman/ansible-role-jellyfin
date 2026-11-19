@@ -9,6 +9,107 @@
     state: "{{ jellyfin_package_state }}"
     version: "{{ jellyfin_package_version if jellyfin_package_version | length > 0 else omit }}"
 
+# --- Hardware acceleration (opt-in) -----------------------------------------
+# While jellyfin_hardware_acceleration is empty none of the tasks below do
+# anything: no driver package is installed and Jellyfin's own encoding.xml is
+# left exactly as the application wrote it. That is the whole point of the
+# default, because the values that work depend on the GPU (which codecs it can
+# encode, whether its driver implements VPP tone mapping at all), so the role
+# ships mechanism and the inventory supplies policy.
+
+- name: Assert the hardware acceleration options are values Jellyfin accepts
+  ansible.builtin.assert:
+    that:
+      - jellyfin_hardware_acceleration in jellyfin_hardware_acceleration_types
+      - jellyfin_tonemapping in jellyfin_tonemapping_modes
+    fail_msg: >-
+      jellyfin_hardware_acceleration must be one of
+      {{ jellyfin_hardware_acceleration_types | join(', ') }} and
+      jellyfin_tonemapping one of {{ jellyfin_tonemapping_modes | join(', ') }}
+      (got '{{ jellyfin_hardware_acceleration }}' and '{{ jellyfin_tonemapping }}').
+      Jellyfin answers an unknown value by falling back to its own defaults,
+      which would leave the server on software encoding with no visible error.
+    quiet: true
+  when: jellyfin_hardware_acceleration | length > 0
+
+# Debian family only, and deliberately no intel-gpu-tools: intel_gpu_top reads
+# the GPU's perf PMU, which the kernel reserves to the initial user namespace,
+# so it can never work inside an unprivileged container (monitor the host
+# instead). intel-opencl-icd is added only when OpenCL tone mapping is selected
+# because it is load-bearing there: the package's own dependency chain brings
+# in the OpenCL loader (ocl-icd-libopencl1) but no ICD, and without an ICD the
+# tonemap_opencl filter fails and tone mapping is silently dead.
+#
+# The RedHat family renders the configuration and installs no driver packages.
+# RPM Fusion's GPU driver packaging varies by release (libva-intel-media-driver
+# on Fedora, no Intel OpenCL ICD at all on EL) and the correct set depends on
+# the vendor of the passthrough device, so the operator supplies it rather than
+# the role guessing.
+- name: Install GPU runtime packages
+  ansible.builtin.package:
+    name: "{{ jellyfin_gpu_packages_debian }}"
+    state: present
+  when:
+    - jellyfin_hardware_acceleration | length > 0
+    - jellyfin_install_gpu_packages | bool
+    - ansible_facts.os_family == 'Debian'
+
+# Jellyfin rewrites encoding.xml with its complete option set a few seconds
+# after it starts, keeping the values it read: measured on 12.4, a file holding
+# only the elements this role owns comes back expanded to the full document with
+# the template's comment dropped. Comparing the file against the template would
+# therefore report a change on every converge and restart the transcoder each
+# time, so the role converges the elements it owns instead: encoding.xml is
+# written when it is missing or when one of those elements no longer holds the
+# configured value. Everything else in the file (and every other dashboard
+# setting) is left alone.
+- name: Inspect the Jellyfin encoding configuration
+  ansible.builtin.stat:
+    path: "{{ jellyfin_config_dir }}/encoding.xml"
+  register: jellyfin_encoding_file
+  when: jellyfin_hardware_acceleration | length > 0
+
+- name: Read the Jellyfin encoding configuration
+  ansible.builtin.slurp:
+    src: "{{ jellyfin_config_dir }}/encoding.xml"
+  register: jellyfin_encoding_contents
+  when:
+    - jellyfin_hardware_acceleration | length > 0
+    - jellyfin_encoding_file.stat.exists
+
+- name: List the encoding elements that no longer hold the configured value
+  ansible.builtin.set_fact:
+    jellyfin_encoding_stale_elements: >-
+      {{ jellyfin_encoding_managed_elements | reject('in', jellyfin_encoding_present) | list }}
+  vars:
+    # Layout does not matter to the comparison. Jellyfin's own rewrite removes
+    # the comment this template writes, re-indents the document, and serialises
+    # an empty element as <Element />, so comments are dropped, an empty element
+    # is expanded to its open and close tag, and all whitespace is removed.
+    jellyfin_encoding_present: >-
+      {{ (jellyfin_encoding_contents.content | default('', true) | b64decode)
+      | regex_replace('<!--[\s\S]*?-->', '')
+      | regex_replace('<([A-Za-z0-9]+)\s*/>', '<\1></\1>')
+      | regex_replace('\s+', '') }}
+  when: jellyfin_hardware_acceleration | length > 0
+
+# Written before the service is started: Jellyfin reads encoding.xml when it
+# boots, so a host that is being created must already have the file. A change
+# afterwards is only worth anything to the running server once it restarts,
+# which is what the handler is for (a long-lived Jellyfin keeps the transcode
+# chain it probed at startup).
+- name: Configure Jellyfin hardware encoding
+  ansible.builtin.template:
+    src: encoding.xml.j2
+    dest: "{{ jellyfin_config_dir }}/encoding.xml"
+    owner: jellyfin
+    group: jellyfin
+    mode: "0644"
+  when:
+    - jellyfin_hardware_acceleration | length > 0
+    - jellyfin_encoding_stale_elements | default([]) | length > 0
+  notify: Restart Jellyfin
+
 - name: Ensure Jellyfin is running and enabled
   ansible.builtin.service:
     name: "{{ jellyfin_service_name }}"

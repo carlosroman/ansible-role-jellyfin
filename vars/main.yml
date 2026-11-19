@@ -15,3 +15,40 @@ jellyfin_supported_rpm_distributions:
 
 # Minimum Enterprise Linux major version with RPM Fusion builds of Jellyfin.
 jellyfin_min_el_version: "10"
+
+# Values Jellyfin's HardwareAccelerationType enum accepts (lowercase: the
+# serialiser writes the enum member names it declares).
+jellyfin_hardware_acceleration_types:
+  - none
+  - amf
+  - qsv
+  - nvenc
+  - v4l2m2m
+  - vaapi
+  - videotoolbox
+  - rkmpp
+
+# Values jellyfin_tonemapping accepts: off, the OpenCL filter, or the driver's
+# video post-processing path.
+jellyfin_tonemapping_modes:
+  - ""
+  - opencl
+  - vpp
+
+# The encoding.xml elements this role owns, written the way Jellyfin's .NET
+# XmlSerializer writes them (lowercase booleans, codecs as <string> items, an
+# empty list as an empty element). This is the set the role compares against the
+# file on disk to decide whether encoding.xml needs writing, because Jellyfin
+# re-saves the complete option document shortly after it starts; keep it in sync
+# with templates/encoding.xml.j2.
+jellyfin_encoding_managed_elements:
+  - "<HardwareAccelerationType>{{ jellyfin_hardware_acceleration }}</HardwareAccelerationType>"
+  - "<VaapiDevice>{{ jellyfin_vaapi_device }}</VaapiDevice>"
+  - "<EnableHardwareEncoding>true</EnableHardwareEncoding>"
+  - "<AllowHevcEncoding>{{ jellyfin_allow_hevc_encoding | lower }}</AllowHevcEncoding>"
+  - "<AllowAv1Encoding>{{ jellyfin_allow_av1_encoding | lower }}</AllowAv1Encoding>"
+  - "<EnableTonemapping>{{ 'true' if jellyfin_tonemapping else 'false' }}</EnableTonemapping>"
+  - "<EnableVppTonemapping>{{ 'true' if jellyfin_tonemapping == 'vpp' else 'false' }}</EnableVppTonemapping>"
+  - >-
+    <HardwareDecodingCodecs>{% for codec in jellyfin_hardware_decoding_codecs
+    %}<string>{{ codec }}</string>{% endfor %}</HardwareDecodingCodecs>

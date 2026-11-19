@@ -1,3 +1,10 @@
 #SPDX-License-Identifier: MIT-0
 ---
-# handlers file for role
+# GPU-related configuration and driver changes only reach a running Jellyfin
+# once it restarts: the server probes its encoders at startup and a long-lived
+# process keeps the chain it probed then, so it can go on software-encoding
+# quietly after encoding.xml or a driver package changes.
+- name: Restart Jellyfin
+  ansible.builtin.service:
+    name: "{{ jellyfin_service_name }}"
+    state: restarted
