@@ -53,9 +53,10 @@ Two jobs run on push/PR:
 1. **Lint** — `make lint`
 2. **Test** — `make test` across matrix: `debian12`, `debian13`, `ubuntu2204`, `ubuntu2404`, `ubuntu2604`, `fedora44`, `rockylinux10`
 
-The hardware opt-in scenario is not part of that matrix: its driver packages come
-from `non-free` (Debian) and `universe` (Ubuntu), which the plain Debian container
-images do not enable. Run it with `make test/hardware` on an Ubuntu distro.
+The hardware opt-in runs as its own **Test (hardware acceleration)** job on
+`ubuntu2604`, not across the matrix: its driver packages come from `non-free`
+(Debian) and `universe` (Ubuntu), which the plain Debian container images do not
+enable. Run it locally with `make test/hardware` on an Ubuntu distro.
 
 ## Dependencies
 
