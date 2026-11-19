@@ -53,3 +53,24 @@ jobs:
           PY_COLORS: '1'
           ANSIBLE_FORCE_COLOR: '1'
           MOLECULE_DISTRO: ${{ matrix.distro }}
+
+  # The hardware acceleration opt-in is a separate playbook (converge-hardware.yml)
+  # and only meaningful on Ubuntu: its driver packages live in universe. One
+  # LTS-current distro is enough to catch regressions in the encoding config.
+  test-hardware:
+    name: Test (hardware acceleration)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+      - name: Set up Python
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: make setup
+      - name: Run hardware acceleration tests
+        run: make test/hardware/ubuntu-2604
+        env:
+          PY_COLORS: '1'
+          ANSIBLE_FORCE_COLOR: '1'
